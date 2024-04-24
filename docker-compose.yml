@@ -1,0 +1,50 @@
+version: "3"
+
+volumes:
+  database-data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    restart: always
+    healthcheck:
+      test: [ “CMD-SHELL”, “pg_isready” ]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: sampleUser
+  redis:
+    image: redis:7.2.4-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    depends_on:
+      - postgres
+  sql-server-db:
+    container_name: mssql
+    build: ./dev/mssql_database
+    user: root
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=mssqlDockerPW!
+      - TZ=UTC
+    volumes:
+      - database-data:/var/opt/mssql
+  sample:
+    image: sample:latest
+    container_name: sample
+    restart: always
+    ports:
+      - "8099:8080"
+      - "5004:5004"
+    depends_on:
+      - postgres
+    env_file:
+      - local.env
